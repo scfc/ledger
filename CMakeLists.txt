@@ -150,7 +150,9 @@ if (USE_PYTHON)
 
   find_package(PythonLibs)
   if (PYTHONLIBS_FOUND)
-    set(BOOST_PYTHON python)
+    string(REGEX REPLACE "([0-9]*)\\.([0-9]*).*" "python-py\\1\\2"
+        BOOST_PYTHON
+        ${PYTHONLIBS_VERSION_STRING})
     set(HAVE_BOOST_PYTHON 1)
     include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS})
     message(STATUS "  include dirs: ${PYTHON_INCLUDE_DIRS}")
