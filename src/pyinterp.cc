@@ -363,7 +363,7 @@ copy_for_python(const char *s)
         return NULL;
 
     std::strcpy(result, s);
-    return s;
+    return result;
 }
 #endif /* PY_VERSION_HEX */
 
