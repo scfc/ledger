@@ -207,6 +207,18 @@ else()
   set(HAVE_EDIT 0)
 endif()
 
+find_package(Utfcpp)
+if(NOT Utfcpp_FOUND)
+  # If utfcpp cannot be found in a standard system location or
+  # in Utfcpp_ROOT_DIR fall back to utfcpp provided with the ledger source.
+  message(STATUS "Looking for Utfcpp in ledger source tree")
+  set(Utfcpp_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/utfcpp/source")
+  find_package(Utfcpp REQUIRED)
+endif()
+if(Utfcpp_FOUND)
+  include_directories("${Utfcpp_INCLUDE_DIRS}")
+endif()
+
 #find_package(Gettext)           # Used for running tests
 
 #if (GETTEXT_FOUND)
