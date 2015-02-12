@@ -14,8 +14,33 @@ set(Ledger_VERSION_DATE  20160111)
 
 set(Ledger_TEST_TIMEZONE "America/Chicago")
 
+########################################################################
+
+option(USE_PYTHON "Enable support for the Python scripting bridge" OFF)
+
+option(BUILD_DOCS "Build and install documentation" OFF)
+option(BUILD_WEB_DOCS "Build version of documentation suitable for viewing online" OFF)
+option(BUILD_DEV_DOCS "Build reference documentation using Doxygen" OFF)
+option(BUILD_A4_PDF "Build pdf version of documentation on A4 paper" OFF)
+
+option(BUILD_DEBUG "Build support for runtime debugging" OFF)
+option(BUILD_LIBRARY "Build and install Ledger as a library" ON)
+
+option(DISABLE_ASSERTS "Build without any internal consistency checks" OFF)
+option(CLANG_GCOV "Enable code coverage" OFF)
+option(CLANG_GPROF "Enable code profiling" OFF)
+
+########################################################################
+
 # Point CMake at any custom modules we may ship
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+
+if (CMAKE_CXX_COMPILER MATCHES "clang\\+?")
+  set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
+endif()
 
 enable_testing()
 
@@ -26,18 +51,14 @@ endif()
 
 ########################################################################
 
-option(USE_PYTHON "Build support for the Python scripting bridge" OFF)
-option(BULD_DEV_DOCS "Build reference documentation using Doxygen" OFF)
+if (CLANG_GCOV)
+  set(BUILD_DEBUG ON)
+  set(DISABLE_ASSERTS ON)
+endif()
 
-option(DISABLE_ASSERTS "Build without any internal consistency checks" OFF)
-option(BUILD_DEBUG "Build support for runtime debugging" OFF)
-
-option(BUILD_LIBRARY "Build and install Ledger as a library" ON)
-option(BUILD_DOCS "Build and install documentation" OFF)
-option(BUILD_WEB_DOCS "Build version of documentation suitable for viewing online" OFF)
-
-# Point CMake at any custom modules we may ship
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+if (CLANG_GPROF)
+  set(BUILD_DEBUG ON)
+endif()
 
 if (BUILD_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
@@ -60,73 +81,20 @@ endif()
 
 ########################################################################
 
-set(Python_ADDITIONAL_VERSIONS 2.7 2.6)
-find_package(PythonInterp)      # Used for running tests
-
-if (USE_PYTHON)
-  if (NOT BUILD_LIBRARY)
-    message(ERROR "Building the python module requires BUILD_LIBRARY=ON.")
-  endif()
-
-  find_package(PythonLibs)
-  if (PYTHONLIBS_FOUND)
-    set(BOOST_PYTHON python)
-    set(HAVE_BOOST_PYTHON 1)
-    include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS})
-  else()
-    set(HAVE_BOOST_PYTHON 0)
-    message("Could not find a Python library to use with Boost.Python")
-  endif()
-else()
-  set(HAVE_BOOST_PYTHON 0)
-endif()
-
-# Set BOOST_ROOT to help CMake to find the right Boost version
-find_package(Boost 1.49.0
-  REQUIRED date_time filesystem system iostreams regex unit_test_framework
-  ${BOOST_PYTHON})
-
-include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
-
-find_package(Icu QUIET COMPONENTS icuuc)
-include(CheckForBoostRegexIcu)
-if (BOOST_REGEX_UNICODE_RUNS)
-  set(HAVE_BOOST_REGEX_UNICODE 1)
-else()
-  set(HAVE_BOOST_REGEX_UNICODE 0)
-endif()
-
-if (HAVE_BOOST_PYTHON)
-  include(CheckForBoostPythonMakeSetter)
-  if (BOOST_MAKE_SETTER_RUNS)
-    set(HAVE_BOOST_159_ISSUE_39 0)
-  else()
-    message(STATUS "  Enabling workaround for erroneous make_setter() (Boost Python issue #39)")
-    set(HAVE_BOOST_159_ISSUE_39 1)
-  endif()
-endif()
+message(STATUS "Building on ${CMAKE_HOST_SYSTEM} using CMake ${CMAKE_VERSION}")
 
 ########################################################################
 
 include(CheckIncludeFiles)
 include(CheckFunctionExists)
 include(CheckCSourceCompiles)
-include(CheckCXXSourceCompiles)
 include(CheckCXXSourceRuns)
 include(CMakePushCheckState)
 
-include(CheckForUnixPipes)
-if (UNIX_PIPES_COMPILES)
-  set(HAVE_UNIX_PIPES 1)
-else()
-  set(HAVE_UNIX_PIPES 0)
-endif()
-
-check_function_exists(getpwuid HAVE_GETPWUID)
-check_function_exists(getpwnam HAVE_GETPWNAM)
 check_function_exists(ioctl HAVE_IOCTL)
 check_function_exists(isatty HAVE_ISATTY)
+check_function_exists(getpwuid HAVE_GETPWUID)
+check_function_exists(getpwnam HAVE_GETPWNAM)
 
 ########################################################################
 
@@ -152,26 +120,81 @@ endif()
 find_package(Utfcpp)
 if(NOT Utfcpp_FOUND)
   # If utfcpp cannot be found in a standard system location or
-  # in Utfcpp_ROOT_DIR fall back to utfcpp provided with the ledger source.
+  # in Utfcpp_ROOT_DIR default to utfcpp provided with the ledger source.
   message(STATUS "Looking for Utfcpp in ledger source tree")
-  set(Utfcpp_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/utfcpp/source")
+  set(Utfcpp_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/utfcpp/v2_0/source")
   find_package(Utfcpp REQUIRED)
 endif()
 if(Utfcpp_FOUND)
   include_directories("${Utfcpp_INCLUDE_DIRS}")
 endif()
 
-#find_package(Gettext)           # Used for running tests
+########################################################################
 
-#if (GETTEXT_FOUND)
-#  set(HAVE_GETTEXT 1)
-#else()
-  set(HAVE_GETTEXT 0)
-#endif()
+set(Python_ADDITIONAL_VERSIONS 2.7 2.6)
+find_package(PythonInterp)      # Used for running tests
 
-#find_path(INTL_PATH libintl.h)
-#find_library(INTL_LIB intl)
-#include_directories(SYSTEM "${INTL_PATH}")
+if (USE_PYTHON)
+  if (NOT BUILD_LIBRARY)
+    message(ERROR "Building the python module requires BUILD_LIBRARY=ON.")
+  endif()
+
+  find_package(PythonLibs)
+  if (PYTHONLIBS_FOUND)
+    set(BOOST_PYTHON python)
+    set(HAVE_BOOST_PYTHON 1)
+    include_directories(SYSTEM ${PYTHON_INCLUDE_DIRS})
+    message(STATUS "  include dirs: ${PYTHON_INCLUDE_DIRS}")
+    message(STATUS "  boost suffix: ${BOOST_PYTHON}")
+  else()
+    set(HAVE_BOOST_PYTHON 0)
+    message("Could not find a Python library to use with Boost.Python")
+  endif()
+else()
+  set(HAVE_BOOST_PYTHON 0)
+endif()
+
+# Set BOOST_ROOT to help CMake to find the right Boost version
+find_package(Boost 1.49.0
+  REQUIRED date_time filesystem system iostreams regex unit_test_framework
+  ${BOOST_PYTHON})
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
+
+if (HAVE_BOOST_PYTHON)
+  include(CheckForBoostPythonMakeSetter)
+  if (BOOST_MAKE_SETTER_RUNS)
+    set(HAVE_BOOST_159_ISSUE_39 0)
+  else()
+    message(STATUS "  Enabling workaround for erroneous make_setter() (Boost Python issue #39)")
+    set(HAVE_BOOST_159_ISSUE_39 1)
+  endif()
+endif()
+
+# CheckForBoostRegexIcu requires find_package(Boost) and find_package(Icu)
+find_package(Icu QUIET COMPONENTS icuuc)
+include(CheckForBoostRegexIcu)
+if (BOOST_REGEX_UNICODE_RUNS)
+  set(HAVE_BOOST_REGEX_UNICODE 1)
+else()
+  set(HAVE_BOOST_REGEX_UNICODE 0)
+endif()
+
+include(CheckForUnixPipes)
+if (UNIX_PIPES_COMPILES)
+  set(HAVE_UNIX_PIPES 1)
+else()
+  set(HAVE_UNIX_PIPES 0)
+endif()
+
+########################################################################
+
+include_directories(${CMAKE_INCLUDE_PATH})
+include_directories(${PROJECT_BINARY_DIR})
+
+configure_file(
+  ${PROJECT_SOURCE_DIR}/src/system.hh.in
+  ${PROJECT_BINARY_DIR}/system.hh)
 
 ########################################################################
 
@@ -202,31 +225,6 @@ endmacro(add_ledger_library_dependencies _target)
 
 ########################################################################
 
-include(FindUtfcpp)
-if (UTFCPP_FOUND)
-  include_directories("${UTFCPP_INCLUDE_DIR}")
-else()
-  message(FATAL_ERROR "Missing required header file: utf8.h\n"
-    "Define UTFCPP_PATH or install utfcpp locally into the source tree below lib/utfcpp/."
-    )
-endif()
-
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-
-# add the binary tree to the search path for include files so that we will
-# find system.hh
-include_directories("${PROJECT_BINARY_DIR}")
-
-configure_file(
-  ${PROJECT_SOURCE_DIR}/src/system.hh.in
-  ${PROJECT_BINARY_DIR}/system.hh)
-
-if((CMAKE_CXX_COMPILER MATCHES "clang") OR
-   (CMAKE_CXX_COMPILER MATCHES "clang\\+\\+"))
-  set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
-endif()
-
 add_subdirectory(src)
 add_subdirectory(doc)
 add_subdirectory(test)
@@ -245,7 +243,17 @@ set (CPACK_GENERATOR "TBZ2")
 set (CPACK_SOURCE_GENERATOR "TBZ2")
 set (CPACK_SOURCE_PACKAGE_FILE_NAME
   "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
-set (CPACK_SOURCE_IGNORE_FILES "/.git*;/.dir-locals.el;~$;/doc/website/;/doc/wiki/;/lib/*.sh;/lib/Makefile;/tools/;${CPACK_SOURCE_IGNORE_FILES}")
+
+list (APPEND CPACK_SOURCE_IGNORE_FILES
+    ~$
+    /.git*
+    /.dir-locals.el
+    /doc/website/
+    /doc/wiki/
+    /lib/*.sh
+    /lib/Makefile
+    /tools/
+  )
 
 include (CPack)
 
