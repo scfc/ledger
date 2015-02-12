@@ -89,6 +89,24 @@ find_package(Boost 1.49.0
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
+find_package(Icu QUIET COMPONENTS icuuc)
+include(CheckForBoostRegexIcu)
+if (BOOST_REGEX_UNICODE_RUNS)
+  set(HAVE_BOOST_REGEX_UNICODE 1)
+else()
+  set(HAVE_BOOST_REGEX_UNICODE 0)
+endif()
+
+if (HAVE_BOOST_PYTHON)
+  include(CheckForBoostPythonMakeSetter)
+  if (BOOST_MAKE_SETTER_RUNS)
+    set(HAVE_BOOST_159_ISSUE_39 0)
+  else()
+    message(STATUS "  Enabling workaround for erroneous make_setter() (Boost Python issue #39)")
+    set(HAVE_BOOST_159_ISSUE_39 1)
+  endif()
+endif()
+
 ########################################################################
 
 include(CheckIncludeFiles)
@@ -109,59 +127,6 @@ check_function_exists(getpwuid HAVE_GETPWUID)
 check_function_exists(getpwnam HAVE_GETPWNAM)
 check_function_exists(ioctl HAVE_IOCTL)
 check_function_exists(isatty HAVE_ISATTY)
-
-cmake_push_check_state()
-
-set(CMAKE_REQUIRED_INCLUDES ${CMAKE_INCLUDE_PATH} ${Boost_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_LIBRARIES ${Boost_LIBRARIES} icuuc ${PROFILE_LIBS})
-
-check_cxx_source_runs("
-#include <boost/regex/icu.hpp>
-
-using namespace boost;
-
-int main() {
-  std::string text = \"Активы\";
-  u32regex r = make_u32regex(\"активы\", regex::perl | regex::icase);
-  return u32regex_search(text, r) ? 0 : 1;
-}" BOOST_REGEX_UNICODE_RUNS)
-
-if (BOOST_REGEX_UNICODE_RUNS)
-  set(HAVE_BOOST_REGEX_UNICODE 1)
-else()
-  set(HAVE_BOOST_REGEX_UNICODE 0)
-endif()
-
-cmake_pop_check_state()
-
-# Check if fix for https://github.com/boostorg/python/issues/39 is needed
-if (HAVE_BOOST_PYTHON)
-cmake_push_check_state()
-
-set(CMAKE_REQUIRED_INCLUDES
-    ${CMAKE_INCLUDE_PATH} ${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_LIBRARIES
-    ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${PROFILE_LIBS})
-
-check_cxx_source_compiles("
-#include <boost/python.hpp>
-
-struct X { int y; };
-
-int main()
-{
-  boost::python::make_setter(&X::y);
-  return 0;
-}" BOOST_MAKE_SETTER_COMPILES)
-
-if (BOOST_MAKE_SETTER_COMPILES)
-  set(HAVE_BOOST_159_ISSUE_39 0)
-else()
-  set(HAVE_BOOST_159_ISSUE_39 1)
-endif()
-
-cmake_pop_check_state()
-endif()
 
 ########################################################################
 
@@ -206,6 +171,7 @@ endif()
 macro(add_ledger_library_dependencies _target)
   target_link_libraries(${_target} Gmp::Gmp)
   target_link_libraries(${_target} Mpfr::Mpfr)
+  target_link_libraries(${_target} ${Boost_LIBRARIES})
   if (HAVE_EDIT)
     target_link_libraries(${_target} Editline::Editline)
   endif()
@@ -216,16 +182,13 @@ macro(add_ledger_library_dependencies _target)
     if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
       # Don't link directly to a Python framework on macOS, to avoid segfaults
       # when the module is imported from a different interpreter
-      target_link_libraries(${_target} ${Boost_LIBRARIES})
       set_target_properties(${_target} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
     else()
-      target_link_libraries(${_target} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
+      target_link_libraries(${_target} ${PYTHON_LIBRARIES})
     endif()
-  else()
-    target_link_libraries(${_target} ${Boost_LIBRARIES})
   endif()
   if (HAVE_BOOST_REGEX_UNICODE)
-    target_link_libraries(${_target} icuuc)
+    target_link_libraries(${_target} Icu::Icu)
   endif()
   target_link_libraries(${_target} ${PROFILE_LIBS})
 endmacro(add_ledger_library_dependencies _target)
