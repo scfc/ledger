@@ -44,6 +44,7 @@ addons:
       - libboost-iostreams-dev
       - libboost-filesystem-dev
       - libboost-serialization-dev
+      - lcov
 
 before_install:
   - |
@@ -64,14 +65,19 @@ install:
         popd
         rm -Rf "${BOOST_SOURCE}"
     fi
+  - pip install cpp-coveralls --user
 
 before_script:
-  - cmake . -DUSE_PYTHON=ON -DBUILD_DEBUG=ON
+  - cmake . -DBUILD_DEBUG=ON -DUSE_PYTHON=ON -DCLANG_GCOV=OFF
   - make
 
 script:
   - ctest --output-on-failure
   - PYTHONPATH=. python python/demo.py
+
+after_success:
+  - make ledger_coverage
+  - $HOME/.local/bin/coveralls --exclude lib --exclude tests --gcov-options '\-lp'
 
 notifications:
   email:
