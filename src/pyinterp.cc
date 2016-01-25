@@ -38,6 +38,24 @@
 #include "xact.h"
 #include "post.h"
 
+using namespace boost::python;
+
+namespace ledger {
+  extern void initialize_for_python();
+}
+
+BOOST_PYTHON_MODULE(ledger)
+{
+  using namespace ledger;
+
+  if (! python_session.get())
+    python_session.reset(new python_interpreter_t);
+
+  set_session_context(python_session.get());
+
+  initialize_for_python();
+}
+
 namespace ledger {
 
 using namespace python;
@@ -146,36 +164,21 @@ void python_interpreter_t::initialize()
   try {
     DEBUG("python.interp", "Initializing Python");
 
+
+    PyImport_AppendInittab(PY_MODULE_NAME,
+#if PY_VERSION_HEX+0 >= 0x03000000
+      &PyInit_ledger
+#else
+      &initledger
+#endif
+    );
+
     Py_Initialize();
     assert(Py_IsInitialized());
 
     hack_system_paths();
 
     main_module = import_module("__main__");
-
-#if PY_VERSION_HEX+0 >= 0x03000000
-    static PyModuleDef_Base initial_m_base = {
-        PyObject_HEAD_INIT(NULL)
-        0, /* m_init */
-        0, /* m_index */
-        0 /* m_copy */ };
-    static PyMethodDef initial_methods[] = { { 0, 0, 0, 0 } };
-
-    static struct PyModuleDef moduledef = {
-        initial_m_base,
-        "ledger",
-        0, /* m_doc */
-        -1, /* m_size */
-        initial_methods,
-        0,  /* m_reload */
-        0, /* m_traverse */
-        0, /* m_clear */
-        0,  /* m_free */
-    };
-    python::detail::init_module(moduledef, &initialize_for_python);
-#else /* PY_VERSION_HEX */
-    python::detail::init_module("ledger", &initialize_for_python);
-#endif /* PY_VERSION_HEX */
 
     is_initialized = true;
   }
@@ -204,14 +207,14 @@ void python_interpreter_t::hack_system_paths()
     path pathname(str());
     DEBUG("python.interp", "sys.path = " << pathname);
 
-    if (exists(pathname / "ledger" / "__init__.py")) {
-      if (python::object module_ledger = python::import("ledger")) {
+    if (exists(pathname / PY_MODULE_NAME / "__init__.py")) {
+      if (python::object module_ledger = python::import(PY_MODULE_NAME)) {
         DEBUG("python.interp",
-              "Setting ledger.__path__ = " << (pathname / "ledger"));
+              "Setting ledger.__path__ = " << (pathname / PY_MODULE_NAME));
 
         python::object ledger_dict = module_ledger.attr("__dict__");
         python::list temp_list;
-        temp_list.append((pathname / "ledger").string());
+        temp_list.append((pathname / PY_MODULE_NAME).string());
 
         ledger_dict["__path__"] = temp_list;
       } else {

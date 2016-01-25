@@ -50,6 +50,8 @@
 
 #endif /* PY_VERSION_HEX */
 
+#define PY_MODULE_NAME "ledger"
+
 namespace ledger {
 
 class python_module_t : public scope_t, public noncopyable
