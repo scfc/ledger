@@ -263,6 +263,9 @@ endmacro(add_ledger_library_dependencies _target)
 add_subdirectory(src)
 add_subdirectory(doc)
 add_subdirectory(test)
+if (USE_PYTHON)
+  add_subdirectory(python)
+endif()
 
 ########################################################################
 

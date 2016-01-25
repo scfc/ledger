@@ -320,10 +320,10 @@ print(s.get_python_lib(True, prefix=''))"
     add_custom_command(
       TARGET libledger POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      $<TARGET_FILE:libledger> "${CMAKE_BINARY_DIR}/${_ledger_python_module_name}")
+      $<TARGET_FILE:libledger> "${CMAKE_BINARY_DIR}/python/${PROJECT_NAME}/core/${_ledger_python_module_name}")
     install(
-      FILES "${CMAKE_BINARY_DIR}/${_ledger_python_module_name}"
-      DESTINATION ${PYTHON_SITE_PACKAGES})
+      FILES "${CMAKE_BINARY_DIR}/python/${PROJECT_NAME}/core/${_ledger_python_module_name}"
+      DESTINATION ${PYTHON_SITE_PACKAGES}/${PROJECT_NAME}/core/)
   else()
     message(WARNING "PYTHON_SITE_PACKAGES not set. Will not install python module.")
   endif()

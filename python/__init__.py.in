@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+Ledger Python API
+"""
+
+__author__  = 'John Wiegley'
+__version__ = '@Ledger_VERSION_MAJOR@.@Ledger_VERSION_MINOR@.@Ledger_VERSION_PATCH@@Ledger_VERSION_PRERELEASE@'
+__license__ = 'BSD'
+
+version_info = (@Ledger_VERSION_MAJOR@, @Ledger_VERSION_MINOR@, @Ledger_VERSION_PATCH@, '@Ledger_VERSION_PRERELEASE@')
+
+from .core import *
