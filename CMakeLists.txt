@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.5)
+cmake_minimum_required(VERSION 2.8.8)
 if(POLICY CMP0042)
   # CMP0042 is only known to CMake 3.0 and above
   cmake_policy(SET CMP0042 OLD)
