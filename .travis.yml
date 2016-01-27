@@ -2,7 +2,7 @@
 #       Travis WebLint https://lint.travis-ci.org/
 #       or travis-lint https://github.com/travis-ci/travis-lint
 
-language: cpp
+language: python
 compiler:
   - gcc
 os:
@@ -21,6 +21,10 @@ env:
     # Boost version to build against; an empty string means the
     # distribution's default.
     - BOOST_VERSION="1.61.0"
+
+python:
+    - 2.7
+    - 3.5
 
 addons:
   coverity_scan:
