@@ -14,6 +14,8 @@ if (HAVE_BOOST_PYTHON)
   set(TEST_PYTHON_FLAGS "--python")
 endif()
 
+set(TEST_ENV "TZ=${Ledger_TEST_TIMEZONE}" "LC_ALL=${Ledger_TEST_LOCALE}")
+
 macro(add_ledger_harness_tests _class)
   if (PYTHONINTERP_FOUND)
     file(GLOB ${_class}_TESTS *.test)
@@ -26,7 +28,7 @@ macro(add_ledger_harness_tests _class)
           $<TARGET_FILE:ledger> ${PROJECT_SOURCE_DIR}
           ${TestFile} ${TEST_PYTHON_FLAGS})
         set_tests_properties(${_class}Test_${TestFile_Name}
-          PROPERTIES ENVIRONMENT "TZ=${Ledger_TEST_TIMEZONE}")
+          PROPERTIES ENVIRONMENT "${TEST_ENV}")
       endif()
     endforeach()
   endif()
@@ -45,7 +47,7 @@ if (PYTHONINTERP_FOUND)
       COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/test/${_class}.py
       --ledger $<TARGET_FILE:ledger> --file ${TestFile})
     set_tests_properties(${_class}Test_${TestFile_Name}
-      PROPERTIES ENVIRONMENT "TZ=${Ledger_TEST_TIMEZONE}")
+      PROPERTIES ENVIRONMENT "${TEST_ENV}")
   endforeach()
 
   # CheckManpage and CheckTexinfo are disabled, since they do not work
@@ -56,7 +58,7 @@ if (PYTHONINTERP_FOUND)
       COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/test/${_class}.py
       --ledger $<TARGET_FILE:ledger> --source ${PROJECT_SOURCE_DIR})
     set_tests_properties(${_class}
-      PROPERTIES ENVIRONMENT "TZ=${Ledger_TEST_TIMEZONE}")
+      PROPERTIES ENVIRONMENT "${TEST_ENV}")
   endforeach()
 endif()
 

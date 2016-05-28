@@ -1,8 +1,9 @@
 macro(add_ledger_test _name)
+  set(TEST_ENV "TZ=${Ledger_TEST_TIMEZONE}" "LC_ALL=${Ledger_TEST_LOCALE}")
   target_link_libraries(${_name} libledger)
   add_test(Ledger${_name} ${PROJECT_BINARY_DIR}/${_name})
   set_tests_properties(Ledger${_name}
-    PROPERTIES ENVIRONMENT "TZ=${Ledger_TEST_TIMEZONE}")
+    PROPERTIES ENVIRONMENT "${TEST_ENV}")
 endmacro(add_ledger_test _name)
 
 include_directories(${PROJECT_SOURCE_DIR}/src)

@@ -13,6 +13,7 @@ set(Ledger_VERSION_PRERELEASE "")
 set(Ledger_VERSION_DATE  20160111)
 
 set(Ledger_TEST_TIMEZONE "America/Chicago")
+set(Ledger_TEST_LOCALE "en_US.UTF-8")
 
 ########################################################################
 
