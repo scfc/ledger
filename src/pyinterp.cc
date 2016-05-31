@@ -342,7 +342,7 @@ copy_for_python(const char *s)
   std::memset(&state,0,sizeof(mbstate_t));
 
   size_t len = mbsrtowcs(NULL, &s, 0, &state);
-  if (len < 0)
+  if (len == (size_t)-1)
       return NULL;
 
   wchar_t *result = new wchar_t[len+1];
@@ -351,7 +351,7 @@ copy_for_python(const char *s)
   }
 
   if (mbsrtowcs(result, &s, len + 1, &state) == (size_t) -1) {
-      delete result;
+      delete[] result;
       return NULL;
   }
 
