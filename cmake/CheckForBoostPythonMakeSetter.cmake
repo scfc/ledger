@@ -20,7 +20,7 @@
 # See the License for more information.
 #=============================================================================
 
-include(CheckCXXSourceRuns)
+include(CheckCXXSourceCompiles)
 include(CMakePushCheckState)
 
 cmake_push_check_state()
@@ -28,7 +28,7 @@ cmake_push_check_state()
 set(CMAKE_REQUIRED_INCLUDES ${CMAKE_INCLUDE_PATH} ${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
 set(CMAKE_REQUIRED_LIBRARIES ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
 
-check_cxx_source_runs("
+check_cxx_source_compiles("
 #include <boost/python.hpp>
 
 struct X { int y; };
