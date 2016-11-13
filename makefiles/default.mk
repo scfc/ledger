@@ -23,8 +23,8 @@ LIBINTL_ROOT    ?= $(USR)
 
 # User selectable compile options
 PYTHON          ?= OFF
-PYTHON_CONFIG   ?= python3-config
-PYTHON_VERSION  ?= 3.5
+PYTHON_CONFIG   ?= python-config
+PYTHON_VERSION  ?= 2
 DEBUG           ?= OFF
 
 # Developer options
@@ -35,7 +35,6 @@ GIT_REV         ?= HEAD
 MOUNT_POINT     ?= /mnt
 CMAKE_GENERATOR ?= 'Unix Makefiles'
 
-# NOTE: GMP_PATH and MPFR_PATH are only for non-refactored CMakeLists.txt builds
 CMAKE_FLAGS     ?=-Wdev \
 									-DBUILD_DEBUG=$(DEBUG) \
 									-DUSE_PYTHON=$(PYTHON) \
@@ -46,11 +45,6 @@ CMAKE_FLAGS     ?=-Wdev \
 									-DCLANG_GCOV=$(GCOV) \
 									-DCLANG_GPROF=$(GPROF) \
 									\
-									-DGMP_PATH=$(GMP_ROOT) \
-									-DGMP_LIB=$(GMP_ROOT)/lib/libgmp.dylib \
-									-DMPFR_PATH=$(MPFR_ROOT) \
-									-DMPFR_LIB=$(MPFR_ROOT)/lib/libmpfr.dylib \
-									\
 									-DGmp_ROOT_DIR=$(GMP_ROOT) \
 									-DMpfr_ROOT_DIR=$(MPFR_ROOT) \
 									-DIcu_ROOT_DIR=$(ICU4C_ROOT) \
@@ -59,7 +53,6 @@ CMAKE_FLAGS     ?=-Wdev \
 									\
 									-DPython_ADDITIONAL_VERSIONS=$(PYTHON_VERSION) \
 									-DPYTHON_INCLUDE_DIR=`$(PYTHON_CONFIG) --includes | cut -d' ' -f1 | cut -dI -f2` \
-									-DPYTHON_LIBRARY=$(shell $(PYTHON_CONFIG) --prefix)/lib/libpython3.5.dylib \
 									\
 									-DCMAKE_INSTALL_PREFIX=$(PREFIX)
 									#-DBoost_USE_MULTITHREADED=OFF \
