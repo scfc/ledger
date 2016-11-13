@@ -70,7 +70,8 @@ if (HAVE_BOOST_PYTHON)
     py_utils.cc
     py_value.cc
     py_xact.cc
-    pyinterp.cc)
+    pyinterp.cc
+    pyledger.cc)
 endif()
 
 set(LEDGER_INCLUDES
