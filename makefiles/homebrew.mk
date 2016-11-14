@@ -8,7 +8,7 @@ PREFIX          := $(shell brew --cellar ledger)/HEAD
 # User selectable compile options
 PYTHON          := OFF
 DEBUG           := OFF
-EMACS_LISP      := OFF
+CXX             := clang++
 
 # Specify location of ledger dependencies
 HOMEBREW_PREFIX := $(shell brew --prefix)

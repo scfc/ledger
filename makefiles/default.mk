@@ -54,6 +54,7 @@ CMAKE_FLAGS     ?=-Wdev \
 									-DPython_ADDITIONAL_VERSIONS=$(PYTHON_VERSION) \
 									-DPYTHON_INCLUDE_DIR=`$(PYTHON_CONFIG) --includes | cut -d' ' -f1 | cut -dI -f2` \
 									\
+									-DCMAKE_CXX_COMPILER=$(CXX) \
 									-DCMAKE_INSTALL_PREFIX=$(PREFIX)
 									#-DBoost_USE_MULTITHREADED=OFF \
 									#-DBoost_DEBUG=1 \
