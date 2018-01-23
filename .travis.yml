@@ -20,7 +20,7 @@ env:
   matrix:
     # Boost version to build against; an empty string means the
     # distribution's default.
-    - BOOST_VERSION="1.61.0"
+    - BOOST_VERSION="1.66.0"
 
 python:
     - 2.7
