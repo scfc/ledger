@@ -9,6 +9,8 @@ compiler:
 os:
   - linux
   - osx
+services:
+  - docker
 sudo: false
 cache:
   apt: true
@@ -26,6 +28,12 @@ env:
     - BREWS="gmp,mpfr"
       # Encrypted COVERITY_SCAN_TOKEN
     - secure: "mYNxD1B8WNSvUeKzInehZ7syi2g1jH2ymeSQxoeKKD2duq3pvNWPdZdc4o9MlWQcAqcz58rhFZRIpuEWCnP0LbbJaG+MyuemMn9uAmg9Y4gFpMsBPHuTdf8pO3rDex+tkrr9puEJFgL+QV/TehxO6NDDpx7UdYvJb+4aZD/auYI="
+  matrix:
+    - DOCKERIMAGE= PACKAGES=''
+    - DOCKERIMAGE=fedora:28 PACKAGES='boost-devel boost-python-devel cmake gcc gcc-c++ gettext-devel gmp-devel libedit-devel make mpfr-devel python2-devel utf8cpp-devel'
+    - DOCKERIMAGE=fedora:29 PACKAGES='boost-devel boost-python2-devel cmake gcc gcc-c++ gettext-devel gmp-devel libedit-devel make mpfr-devel python2-devel utf8cpp-devel'
+    - DOCKERIMAGE=fedora:rawhide PACKAGES='boost-devel boost-python2-devel cmake gcc gcc-c++ gettext-devel gmp-devel libedit-devel make mpfr-devel python2-devel utf8cpp-devel'
+
 
 matrix:
   exclude:
@@ -89,18 +97,26 @@ install:
   - tools/travis-install.sh
 
 before_script:
-  - cmake . -DUSE_PYTHON=ON -DBUILD_DEBUG=ON
-  - make
+  - if [ -z "${DOCKERIMAGE}" ]; then cmake . -DUSE_PYTHON=ON -DBUILD_DEBUG=ON; fi
+  - if [ -z "${DOCKERIMAGE}" ]; then make; fi
 
 script:
-  - ctest --output-on-failure
-  - PYTHONPATH=. python python/demo.py
+  - if [ -z "${DOCKERIMAGE}" ]; then ctest --output-on-failure; fi
+  - if [ -z "${DOCKERIMAGE}" ]; then PYTHONPATH=. python python/demo.py; fi
+  # TODO: The values for *FLAGS and the invocation of cmake come from
+  # cmake-rpm-macros's /usr/lib/rpm/macros.d/macros.cmake, the values
+  # for PACKAGES from Fedora's ledger.spec.  To avoid bitrot, it would
+  # make sense to (for starters) expand *FLAGS dynamically and/or
+  # clone https://src.fedoraproject.org/rpms/ledger.git, check out the
+  # relevant branch and then run fedpkg local.
+  - if [ -n "${DOCKERIMAGE}" ]; then docker run -v `pwd`:/src/ledger:rw "${DOCKERIMAGE}" /bin/bash -c "cd /src/ledger && dnf install -y $PACKAGES && export CFLAGS='-O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection' CXXFLAGS='-O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection' FFLAGS='-O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -I/usr/lib64/gfortran/modules}' FCFLAGS='-O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -I/usr/lib64/gfortran/modules' LDFLAGS='-Wl,-z,relro  -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld' && /usr/bin/cmake -DCMAKE_C_FLAGS_RELEASE:STRING='-DNDEBUG' -DCMAKE_CXX_FLAGS_RELEASE:STRING='-DNDEBUG' -DCMAKE_Fortran_FLAGS_RELEASE:STRING='-DNDEBUG' -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_INSTALL_PREFIX:PATH=/usr -DINCLUDE_INSTALL_DIR:PATH=/usr/include -DLIB_INSTALL_DIR:PATH=/usr/lib64 -DSYSCONF_INSTALL_DIR:PATH=/etc -DSHARE_INSTALL_PREFIX:PATH=/usr/share -DLIB_SUFFIX=64 -DBUILD_SHARED_LIBS:BOOL=ON . -DUSE_PYTHON:BOOL=ON -DUSE_DOXYGEN:BOOL=OFF -DBUILD_WEB_DOCS:BOOL=OFF && make && CTEST_OUTPUT_ON_FAILURE=1 make check"; fi
+
 
 after_script:
   # These scripts are run for informational purposes and
   # should be reintegrated into CTest once they reliably verify the documentation.
-  - python test/CheckTexinfo.py -l ledger -s .
-  - python test/CheckManpage.py -l ledger -s .
+  - if [ -z "${DOCKERIMAGE}" ]; then python test/CheckTexinfo.py -l ledger -s .; fi
+  - if [ -z "${DOCKERIMAGE}" ]; then python test/CheckManpage.py -l ledger -s .; fi
 
 notifications:
   email:
