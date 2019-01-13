@@ -8,6 +8,8 @@ compiler:
 os:
   - linux
   - osx
+services:
+  - docker
 sudo: false
 cache:
   apt: true
@@ -23,15 +25,28 @@ env:
     # distribution's default.
     - BOOST_VERSION=""
     - BOOST_VERSION="1.61.0"
+    - DOCKERIMAGE= PACKAGES=''
+    - DOCKERIMAGE=fedora:28 PACKAGES='boost-devel boost-python-devel cmake gcc gcc-c++ gettext-devel gmp-devel libedit-devel make mpfr-devel python2-devel utf8cpp-devel'
+    - DOCKERIMAGE=fedora:29 PACKAGES='boost-devel boost-python2-devel cmake gcc gcc-c++ gettext-devel gmp-devel libedit-devel make mpfr-devel python2-devel utf8cpp-devel'
+    - DOCKERIMAGE=fedora:rawhide PACKAGES='boost-devel boost-python2-devel cmake gcc gcc-c++ gettext-devel gmp-devel libedit-devel make mpfr-devel python2-devel utf8cpp-devel'
 
-# The configuration for macOS only works with Boost installed by
-# homebrew, so exclude the other combinations.
 matrix:
   exclude:
+    # The configuration for macOS only works with Boost installed by
+    # homebrew, so exclude the other combinations.
     - os: linux
       env: BOOST_VERSION=""
     - os: osx
       env: BOOST_VERSION="1.61.0"
+    # Run tests via docker only on Linux.
+    - os: osx
+      env: DOCKERIMAGE= PACKAGES=''
+    - os: osx
+      env: DOCKERIMAGE=fedora:28 PACKAGES='boost-devel boost-python-devel cmake gcc gcc-c++ gettext-devel gmp-devel libedit-devel make mpfr-devel python2-devel utf8cpp-devel'
+    - os: osx
+      env: DOCKERIMAGE=fedora:29 PACKAGES='boost-devel boost-python2-devel cmake gcc gcc-c++ gettext-devel gmp-devel libedit-devel make mpfr-devel python2-devel utf8cpp-devel'
+    - os: osx
+      env: DOCKERIMAGE=fedora:rawhide PACKAGES='boost-devel boost-python2-devel cmake gcc gcc-c++ gettext-devel gmp-devel libedit-devel make mpfr-devel python2-devel utf8cpp-devel'
 
 addons:
   coverity_scan:
@@ -86,13 +101,20 @@ before_script:
   # On macOS, CMake finds the Boost.Python installed by homebrew only
   # with the component name "python27".  Also, precompiling system.hh
   # does not work.
-  - if [ "$TRAVIS_OS_NAME" = osx -a -z "$BOOST_VERSION" ]; then EXTRA_CMAKE_ARGS="-DPRECOMPILE_SYSTEM_HH=OFF -DUSE_PYTHON27_COMPONENT=ON"; fi
-  - cmake . -DUSE_PYTHON=ON -DBUILD_DEBUG=ON $EXTRA_CMAKE_ARGS
-  - make VERBOSE=1
+  - if [ -z "${DOCKERIMAGE}" ]; then if [ "$TRAVIS_OS_NAME" = osx -a -z "$BOOST_VERSION" ]; then EXTRA_CMAKE_ARGS="-DPRECOMPILE_SYSTEM_HH=OFF -DUSE_PYTHON27_COMPONENT=ON"; fi; fi
+  - if [ -z "${DOCKERIMAGE}" ]; then cmake . -DUSE_PYTHON=ON -DBUILD_DEBUG=ON $EXTRA_CMAKE_ARGS; fi
+  - if [ -z "${DOCKERIMAGE}" ]; then make VERBOSE=1; fi
 
 script:
-  - ctest --output-on-failure
-  - PYTHONPATH=. python python/demo.py
+  - if [ -z "${DOCKERIMAGE}" ]; then ctest --output-on-failure; fi
+  - if [ -z "${DOCKERIMAGE}" ]; then PYTHONPATH=. python python/demo.py; fi
+  # TODO: The values for *FLAGS and the invocation of cmake come from
+  # cmake-rpm-macros's /usr/lib/rpm/macros.d/macros.cmake, the values
+  # for PACKAGES from Fedora's ledger.spec.  To avoid bitrot, it would
+  # make sense to (for starters) expand *FLAGS dynamically and/or
+  # clone https://src.fedoraproject.org/rpms/ledger.git, check out the
+  # relevant branch and then run fedpkg local.
+  - if [ -n "${DOCKERIMAGE}" ]; then docker run -v `pwd`:/src/ledger:rw "${DOCKERIMAGE}" /bin/bash -c "cd /src/ledger && dnf install -y $PACKAGES && export CFLAGS='-O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection' CXXFLAGS='-O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection' FFLAGS='-O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -I/usr/lib64/gfortran/modules}' FCFLAGS='-O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -I/usr/lib64/gfortran/modules' LDFLAGS='-Wl,-z,relro  -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld' && /usr/bin/cmake -DCMAKE_C_FLAGS_RELEASE:STRING='-DNDEBUG' -DCMAKE_CXX_FLAGS_RELEASE:STRING='-DNDEBUG' -DCMAKE_Fortran_FLAGS_RELEASE:STRING='-DNDEBUG' -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_INSTALL_PREFIX:PATH=/usr -DINCLUDE_INSTALL_DIR:PATH=/usr/include -DLIB_INSTALL_DIR:PATH=/usr/lib64 -DSYSCONF_INSTALL_DIR:PATH=/etc -DSHARE_INSTALL_PREFIX:PATH=/usr/share -DLIB_SUFFIX=64 -DBUILD_SHARED_LIBS:BOOL=ON . -DUSE_PYTHON:BOOL=ON -DUSE_DOXYGEN:BOOL=OFF -DBUILD_WEB_DOCS:BOOL=OFF -DBUILD_DEBUG=ON && make && CTEST_OUTPUT_ON_FAILURE=1 make check"; fi
 
 notifications:
   email:
